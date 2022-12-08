@@ -41,7 +41,6 @@ public class AuthService implements IAuthService {
     public boolean hasPermission(String token, Permission permission) {
         if (!isEmpty(token) && token.contains("Bearer ")) {
             String jwt = token.substring(token.indexOf("Bearer ") + 7);
-//            jwt = jwt.substring(0, jwt.length()-2); //?
             Jws<Claims> claims = Jwts.parser().setSigningKey(key).parseClaimsJws(jwt);
             List<Permission> permissions = (ArrayList<Permission>) claims.getBody().get("permissions");
             for (Iterator<Permission> i = permissions.iterator(); i.hasNext();) {

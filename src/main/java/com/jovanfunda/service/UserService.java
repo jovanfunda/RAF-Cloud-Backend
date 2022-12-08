@@ -3,6 +3,7 @@ package com.jovanfunda.service;
 import java.util.List;
 import java.util.Optional;
 
+import com.jovanfunda.model.UpdateUserDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +26,7 @@ public class UserService {
 
 	public boolean registerNewUser(User user) {
 		if(!userExists(user.getEmail())) {
+			System.out.println(user.getJWToken());
 			userRepository.save(user);
 			return true;
 		}
@@ -43,5 +45,20 @@ public class UserService {
 			}
 		}
 		return "";
+	}
+
+	public void updateUser(UpdateUserDto updateUserDto, String jwtoken) {
+		User realUser = userRepository.findById(updateUserDto.getRealEmail()).get();
+		realUser.setName(updateUserDto.getUser().getName());
+		realUser.setLastname(updateUserDto.getUser().getLastname());
+		realUser.setPermissions(updateUserDto.getUser().getPermissions());
+		realUser.setJWToken(jwtoken);
+		if(!updateUserDto.getPassword().equals(""))
+			realUser.setPassword(updateUserDto.getPassword());
+		userRepository.save(realUser);
+	}
+
+	public void deleteUser(String userEmail) {
+		userRepository.deleteById(userEmail);
 	}
 }
