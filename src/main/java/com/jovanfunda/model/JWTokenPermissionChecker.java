@@ -20,4 +20,12 @@ public class JWTokenPermissionChecker {
     public void setPermission(Permission permission) {
         this.permission = permission;
     }
+
+    @Override
+    public String toString() {
+        return "JWTokenPermissionChecker{" +
+                "jwtoken='" + jwtoken + '\'' +
+                ", permission=" + permission +
+                '}';
+    }
 }

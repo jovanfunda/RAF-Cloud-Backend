@@ -1,7 +1,7 @@
 package com.jovanfunda.model;
 
 public enum Permission {
-    CREATE("C"), READ("R"), UPDATE("U"), DELETE("D");
+    CAN_CREATE_USERS("C"), CAN_READ_USERS("R"), CAN_UPDATE_USERS("U"), CAN_DELETE_USERS("D");
 
     private final String label;
 

@@ -32,14 +32,14 @@ public class AuthService implements IAuthService {
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(user.getEmail())
-                .setExpiration(new Date(new Date().getTime() + 1000 * 60 * 60L *50))
+                .setExpiration(new Date(new Date().getTime() + 1000 * 60 * 60L))
                 .setIssuedAt(new Date())
                 .signWith(SignatureAlgorithm.HS512, key)
                 .compact();
     }
 
     public boolean hasPermission(String token, Permission permission) {
-        if (!isEmpty(token) && token.contains("Bearer ")) {
+        if (token.contains("Bearer ")) {
             String jwt = token.substring(token.indexOf("Bearer ") + 7);
             Jws<Claims> claims = Jwts.parser().setSigningKey(key).parseClaimsJws(jwt);
             List<Permission> permissions = (ArrayList<Permission>) claims.getBody().get("permissions");
@@ -52,6 +52,8 @@ public class AuthService implements IAuthService {
         }
         return false;
     }
+
+    // ubaciti da gde god pise da je istekao token da te baci na login stranu?? kao elearning
 
     public boolean isAuthorized(String token) {
         if (!isEmpty(token) && token.contains("Bearer ")) {

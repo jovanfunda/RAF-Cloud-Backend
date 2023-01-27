@@ -1,6 +1,7 @@
 package com.jovanfunda.controller;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.jovanfunda.authentication.AuthService;
 import com.jovanfunda.model.*;
@@ -27,8 +28,8 @@ public class UserController {
 	}
 
 	@PostMapping("/users")
-	public ResponseEntity<List<User>> getUsers(@RequestBody String jwtoken) {
-		if (authService.hasPermission(jwtoken, Permission.READ)) {
+	public ResponseEntity<List<User>> getUsers(@RequestHeader String jwtoken) {
+		if (authService.hasPermission(jwtoken, Permission.CAN_READ_USERS)) {
 			return ResponseEntity.ok().body(userService.getUsers());
 		} else {
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -36,13 +37,13 @@ public class UserController {
 	}
 
 	@PostMapping("/registerUser")
-	public String registerNewUser(@RequestBody User user) {
-		String JWToken = authService.generateJWT(user);
-		user.setJWToken(JWToken);
-		if (!userService.registerNewUser(user)) {
-			return null;
+	public ResponseEntity<Boolean> registerNewUser(@RequestHeader String jwtoken, @RequestBody User user) {
+		if (authService.hasPermission(jwtoken, Permission.CAN_CREATE_USERS)) {
+			if (!userService.registerNewUser(user)) {
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(false);
+			}
 		}
-		return JWToken;
+		return ResponseEntity.ok().body(true);
 	}
 
 	@PostMapping("/hasPermission")
@@ -54,23 +55,32 @@ public class UserController {
 		}
 	}
 
-	// JWToken if user exists, empty String if it doesn't
-	@PostMapping("/checkPassword")
-	public String checkPassword(@RequestBody UserLoginDto user) {
-		return userService.checkPassword(user.getEmail(), user.getPassword());
+	@PostMapping("/login")
+	public ResponseEntity<String> login(@RequestBody UserLoginDto userDto) {
+		Optional<User> optUser = userService.findById(userDto.getEmail());
+		if (optUser.isPresent()) {
+			User user = optUser.get();
+			if(user.checkPassword(userDto.getPassword())) {
+				return ResponseEntity.ok().body(authService.generateJWT(user));
+			}
+		}
+		return ResponseEntity.status(404).build();
 	}
 
 	@PostMapping("/updateUser")
-	public void updateUser(@RequestBody UpdateUserDto updateUser) {
-		User newUser = new User();
-		newUser.setEmail(updateUser.getRealEmail());
-		newUser.setPermissions(updateUser.getUser().getPermissions());
-		String jwtoken = authService.generateJWT(newUser);
-		userService.updateUser(updateUser, jwtoken);
+	public ResponseEntity<Boolean> updateUser(@RequestHeader String jwtoken, @RequestBody UpdateUserDto updateUser) {
+		if (authService.hasPermission(jwtoken, Permission.CAN_UPDATE_USERS)) {
+			return ResponseEntity.ok().body(userService.updateUser(updateUser));
+		}
+		return ResponseEntity.status(403).build();
 	}
 
 	@PostMapping("/deleteUser")
-	public void deleteUser(@RequestBody String userEmail) {
-		userService.deleteUser(userEmail);
+	public ResponseEntity<Void> deleteUser(@RequestHeader String jwtoken, @RequestBody String userEmail) {
+		if (authService.hasPermission(jwtoken, Permission.CAN_DELETE_USERS)) {
+			userService.deleteUser(userEmail);
+			return ResponseEntity.ok().build();
+		}
+		return ResponseEntity.status(403).build();
 	}
 }

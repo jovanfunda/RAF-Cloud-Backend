@@ -15,10 +15,11 @@ public class User {
 	@Id
 	String email;
 	String password;
-	String JWToken;
+
 	String name;
 	String lastname;
 	@ElementCollection
+	@Enumerated(EnumType.STRING)
 	List<Permission> permissions;
 
 	public User() {
@@ -41,14 +42,6 @@ public class User {
 
 	public String getPassword() {
 		return this.password;
-	}
-
-	public String getJWToken() {
-		return JWToken;
-	}
-
-	public void setJWToken(String JWToken) {
-		this.JWToken = JWToken;
 	}
 
 	public String getEmail() {

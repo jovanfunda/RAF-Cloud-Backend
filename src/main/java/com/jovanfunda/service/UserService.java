@@ -1,8 +1,12 @@
 package com.jovanfunda.service;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.exceptions.JWTDecodeException;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.jovanfunda.model.UpdateUserDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,7 +30,6 @@ public class UserService {
 
 	public boolean registerNewUser(User user) {
 		if(!userExists(user.getEmail())) {
-			System.out.println(user.getJWToken());
 			userRepository.save(user);
 			return true;
 		}
@@ -37,28 +40,31 @@ public class UserService {
 		return userRepository.findById(email).isPresent();
 	}
 
-	public String checkPassword(String email, String password) {
-		Optional<User> user_temp = userRepository.findById(email);
-		if(user_temp.isPresent()) {
-			if(user_temp.get().checkPassword(password)) {
-				return user_temp.get().getJWToken();
-			}
-		}
-		return "";
-	}
 
-	public void updateUser(UpdateUserDto updateUserDto, String jwtoken) {
-		User realUser = userRepository.findById(updateUserDto.getRealEmail()).get();
-		realUser.setName(updateUserDto.getUser().getName());
-		realUser.setLastname(updateUserDto.getUser().getLastname());
-		realUser.setPermissions(updateUserDto.getUser().getPermissions());
-		realUser.setJWToken(jwtoken);
-		if(!updateUserDto.getPassword().equals(""))
-			realUser.setPassword(updateUserDto.getPassword());
-		userRepository.save(realUser);
+	public Boolean updateUser(UpdateUserDto updateUserDto) {
+		if(userRepository.findById(updateUserDto.getRealEmail()).isPresent()) {
+			User realUser = userRepository.findById(updateUserDto.getRealEmail()).get();
+			System.out.println(updateUserDto.getUser().getName());
+			realUser.setName(updateUserDto.getUser().getName());
+			System.out.println(updateUserDto.getUser().getLastname());
+			realUser.setLastname(updateUserDto.getUser().getLastname());
+			System.out.println(updateUserDto.getUser().getPermissions());
+			realUser.setPermissions(updateUserDto.getUser().getPermissions());
+			System.out.println(updateUserDto.getPassword());
+			if(!updateUserDto.getPassword().equals(""))
+				realUser.setPassword(updateUserDto.getPassword());
+			System.out.println(realUser);
+			userRepository.save(realUser);
+			return true;
+		}
+		return false;
 	}
 
 	public void deleteUser(String userEmail) {
 		userRepository.deleteById(userEmail);
+	}
+
+	public Optional<User> findById(String email) {
+		return userRepository.findById(email);
 	}
 }
