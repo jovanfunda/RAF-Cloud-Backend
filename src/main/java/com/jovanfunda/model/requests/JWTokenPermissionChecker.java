@@ -1,4 +1,6 @@
-package com.jovanfunda.model;
+package com.jovanfunda.model.requests;
+
+import com.jovanfunda.model.enums.Permission;
 
 public class JWTokenPermissionChecker {
 

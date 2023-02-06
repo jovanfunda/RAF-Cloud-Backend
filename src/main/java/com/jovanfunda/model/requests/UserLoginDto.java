@@ -1,9 +1,8 @@
-package com.jovanfunda.model;
+package com.jovanfunda.model.requests;
 
 public class UserLoginDto {
 
     String email;
-
     String password;
 
     public String getEmail() {

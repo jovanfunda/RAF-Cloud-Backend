@@ -1,5 +1,6 @@
-package com.jovanfunda.model;
+package com.jovanfunda.model.database;
 
+import com.jovanfunda.model.enums.Permission;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import javax.persistence.*;
@@ -18,9 +19,13 @@ public class User {
 
 	String name;
 	String lastname;
+
 	@ElementCollection
 	@Enumerated(EnumType.STRING)
 	List<Permission> permissions;
+
+	@OneToMany(orphanRemoval = true, mappedBy = "createdBy")
+	List<Machine> machines;
 
 	public User() {
 		bCryptPasswordEncoder = new BCryptPasswordEncoder();

@@ -4,7 +4,11 @@ import java.util.List;
 import java.util.Optional;
 
 import com.jovanfunda.authentication.AuthService;
-import com.jovanfunda.model.*;
+import com.jovanfunda.model.database.User;
+import com.jovanfunda.model.enums.Permission;
+import com.jovanfunda.model.requests.JWTokenPermissionChecker;
+import com.jovanfunda.model.requests.UpdateUserDto;
+import com.jovanfunda.model.requests.UserLoginDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,9 +31,11 @@ public class UserController {
 		this.authService = authService;
 	}
 
-	@PostMapping("/users")
+	@GetMapping("/users")
 	public ResponseEntity<List<User>> getUsers(@RequestHeader String jwtoken) {
-		if (authService.hasPermission(jwtoken, Permission.CAN_READ_USERS)) {
+		if (authService.isTokenExpired(jwtoken)) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		} else if (authService.hasPermission(jwtoken, Permission.CAN_READ_USERS)) {
 			return ResponseEntity.ok().body(userService.getUsers());
 		} else {
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -38,17 +44,23 @@ public class UserController {
 
 	@PostMapping("/registerUser")
 	public ResponseEntity<Boolean> registerNewUser(@RequestHeader String jwtoken, @RequestBody User user) {
-		if (authService.hasPermission(jwtoken, Permission.CAN_CREATE_USERS)) {
-			if (!userService.registerNewUser(user)) {
-				return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(false);
+		if (authService.isTokenExpired(jwtoken)) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		} else if (authService.hasPermission(jwtoken, Permission.CAN_CREATE_USERS)) {
+			if (userService.registerNewUser(user)) {
+				return ResponseEntity.ok().body(true);
 			}
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(false);
+		} else {
+			return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 		}
-		return ResponseEntity.ok().body(true);
 	}
 
 	@PostMapping("/hasPermission")
 	public ResponseEntity<Boolean> hasPermission(@RequestBody JWTokenPermissionChecker jwtdto) {
-		if (authService.hasPermission(jwtdto.getjwtoken(), jwtdto.getPermission())) {
+		if (authService.isTokenExpired(jwtdto.getjwtoken())) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		} else if (authService.hasPermission(jwtdto.getjwtoken(), jwtdto.getPermission())) {
 			return ResponseEntity.ok().body(true);
 		} else {
 			return ResponseEntity.ok().body(false);
@@ -64,23 +76,29 @@ public class UserController {
 				return ResponseEntity.ok().body(authService.generateJWT(user));
 			}
 		}
-		return ResponseEntity.status(404).build();
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
 	}
 
 	@PostMapping("/updateUser")
 	public ResponseEntity<Boolean> updateUser(@RequestHeader String jwtoken, @RequestBody UpdateUserDto updateUser) {
-		if (authService.hasPermission(jwtoken, Permission.CAN_UPDATE_USERS)) {
+		if (authService.isTokenExpired(jwtoken)) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		} else if (authService.hasPermission(jwtoken, Permission.CAN_UPDATE_USERS)) {
 			return ResponseEntity.ok().body(userService.updateUser(updateUser));
+		} else {
+			return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 		}
-		return ResponseEntity.status(403).build();
 	}
 
 	@PostMapping("/deleteUser")
 	public ResponseEntity<Void> deleteUser(@RequestHeader String jwtoken, @RequestBody String userEmail) {
-		if (authService.hasPermission(jwtoken, Permission.CAN_DELETE_USERS)) {
+		if (authService.isTokenExpired(jwtoken)) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		} else if (authService.hasPermission(jwtoken, Permission.CAN_DELETE_USERS)) {
 			userService.deleteUser(userEmail);
 			return ResponseEntity.ok().build();
+		} else {
+			return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 		}
-		return ResponseEntity.status(403).build();
 	}
 }

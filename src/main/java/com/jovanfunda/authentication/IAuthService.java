@@ -1,6 +1,6 @@
 package com.jovanfunda.authentication;
 
-import com.jovanfunda.model.User;
+import com.jovanfunda.model.database.User;
 import org.springframework.stereotype.Service;
 
 @Service

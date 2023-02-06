@@ -1,7 +1,7 @@
 package com.jovanfunda.authentication;
 
-import com.jovanfunda.model.Permission;
-import com.jovanfunda.model.User;
+import com.jovanfunda.model.enums.Permission;
+import com.jovanfunda.model.database.User;
 import com.jovanfunda.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
@@ -53,8 +53,6 @@ public class AuthService implements IAuthService {
         return false;
     }
 
-    // ubaciti da gde god pise da je istekao token da te baci na login stranu?? kao elearning
-
     public boolean isAuthorized(String token) {
         if (!isEmpty(token) && token.contains("Bearer ")) {
             String jwt = token.substring(token.indexOf("Bearer ") + 7);
@@ -65,6 +63,25 @@ public class AuthService implements IAuthService {
             }
         }
         return false;
+    }
+
+    public boolean isTokenExpired(String token) {
+        String jwt = token.substring(token.indexOf("Bearer ") + 7);
+        try {
+            Jwts.parser().setSigningKey(key).parseClaimsJws(jwt).getBody().getExpiration().before(new Date());
+            return false;
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    public String getEmailFromToken(String token) {
+        if (token.contains("Bearer ")) {
+            String jwt = token.substring(token.indexOf("Bearer ") + 7);
+            Jws<Claims> claims = Jwts.parser().setSigningKey(key).parseClaimsJws(jwt);
+            return claims.getBody().getSubject();
+        }
+        return null;
     }
 
     public static boolean isEmpty(String s){
