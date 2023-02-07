@@ -3,6 +3,7 @@ package com.jovanfunda.controller;
 import com.jovanfunda.authentication.AuthService;
 import com.jovanfunda.model.database.Machine;
 import com.jovanfunda.model.enums.Permission;
+import com.jovanfunda.model.requests.MachineFilterRequest;
 import com.jovanfunda.service.MachineService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -45,6 +46,31 @@ public class MachineController {
             String userEmail = authService.getEmailFromToken(jwtoken);
             machineService.createMachine(userEmail, machineName);
             return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+    }
+
+    @PostMapping("/filterMachine")
+    public ResponseEntity<List<Machine>> filterMachine(@RequestHeader String jwtoken, @RequestBody MachineFilterRequest machineFilter) {
+        if (authService.isTokenExpired(jwtoken)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        } else if (authService.hasPermission(jwtoken, Permission.CAN_SEARCH_MACHINES)) {
+            String userEmail = authService.getEmailFromToken(jwtoken);
+            List<Machine> machines = machineService.filterMachine(userEmail, machineFilter);
+            return ResponseEntity.ok().body(machines);
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+    }
+
+    @DeleteMapping("/deleteMachine/{machineID}")
+    public ResponseEntity<Boolean> deleteMachine(@RequestHeader String jwtoken, @PathVariable Long machineID) {
+        if (authService.isTokenExpired(jwtoken)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        } else if (authService.hasPermission(jwtoken, Permission.CAN_DESTROY_MACHINES)) {
+            boolean deleted = machineService.destroyMachine(machineID);
+            return ResponseEntity.ok().body(deleted);
         } else {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }

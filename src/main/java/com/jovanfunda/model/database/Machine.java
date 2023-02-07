@@ -3,6 +3,7 @@ package com.jovanfunda.model.database;
 import com.jovanfunda.model.enums.Status;
 
 import javax.persistence.*;
+import java.util.Date;
 
 @Entity
 @Table
@@ -17,11 +18,14 @@ public class Machine {
     @Enumerated(EnumType.STRING)
     Status status;
 
-    @ManyToOne(cascade = CascadeType.REMOVE)
+    @ManyToOne
     @JoinColumn(name = "user_email")
     User createdBy;
 
     Boolean active;
+
+    @Temporal(TemporalType.DATE)
+    Date dateCreated;
 
     public Long getId() {
         return id;
@@ -61,5 +65,13 @@ public class Machine {
 
     public Boolean getActive() {
         return active;
+    }
+
+    public void setDateCreated(Date dateCreated) {
+        this.dateCreated = dateCreated;
+    }
+
+    public Date getDateCreated() {
+        return dateCreated;
     }
 }

@@ -3,13 +3,17 @@ package com.jovanfunda.service;
 import com.jovanfunda.model.database.Machine;
 import com.jovanfunda.model.database.User;
 import com.jovanfunda.model.enums.Status;
+import com.jovanfunda.model.requests.MachineFilterRequest;
 import com.jovanfunda.repository.MachineRepository;
 import com.jovanfunda.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class MachineService {
@@ -29,7 +33,7 @@ public class MachineService {
         User user = userRepository.findById(userEmail).get();
         List<Machine> machines = new ArrayList<>();
         machineRepository.findAll().forEach(machine -> {
-            if(machine.getCreatedBy().equals(user)) {
+            if(machine.getCreatedBy().equals(user) && machine.getActive()) {
                 machines.add(machine);
             }
         });
@@ -42,9 +46,35 @@ public class MachineService {
         newMachine.setStatus(Status.STOPPED);
         newMachine.setCreatedBy(userRepository.findById(userEmail).get());
         newMachine.setActive(true);
+        newMachine.setDateCreated(new Date());
         machineRepository.save(newMachine);
     }
 
+    public List<Machine> filterMachine(String userEmail, MachineFilterRequest machineFilter) {
 
+        List<Machine> machines = machineRepository.findAll();
 
+        machines = machines.stream().filter(m -> m.getCreatedBy() == userRepository.findById(userEmail).get() && m.getActive()).collect(Collectors.toList());
+
+        if (machineFilter.getName() != null) {
+            machines = machines.stream().filter(m -> m.getName().toLowerCase().contains(machineFilter.getName().toLowerCase())).collect(Collectors.toList());
+        }
+        if (machineFilter.getStatuses() != null) {
+            machines = machines.stream().filter(m -> machineFilter.getStatuses().contains(m.getStatus())).collect(Collectors.toList());
+        }
+        if (machineFilter.getDateFrom() != null && machineFilter.getDateTo() != null) {
+            machines = machines.stream().filter(m -> m.getDateCreated().after(machineFilter.getDateFrom()) && m.getDateCreated().before(machineFilter.getDateTo())).collect(Collectors.toList());
+        }
+
+        return machines;
+    }
+
+    @Transactional
+    public boolean destroyMachine(Long machineID) {
+        if(machineRepository.findById(machineID).isPresent()) {
+            machineRepository.findById(machineID).get().setActive(false);
+            return true;
+        }
+        return false;
+    }
 }
