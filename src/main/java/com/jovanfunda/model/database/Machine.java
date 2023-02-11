@@ -27,6 +27,9 @@ public class Machine {
     @Temporal(TemporalType.DATE)
     Date dateCreated;
 
+    @Version
+    Integer version = 0;
+
     public Long getId() {
         return id;
     }

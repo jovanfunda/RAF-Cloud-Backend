@@ -6,7 +6,10 @@ import com.jovanfunda.model.enums.Status;
 import com.jovanfunda.model.requests.MachineFilterRequest;
 import com.jovanfunda.repository.MachineRepository;
 import com.jovanfunda.repository.UserRepository;
+import org.hibernate.StaleStateException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +27,7 @@ public class MachineService {
     @Autowired
     UserRepository userRepository;
 
+
     public MachineService(MachineRepository machineRepository, UserRepository userRepository) {
         this.machineRepository = machineRepository;
         this.userRepository = userRepository;
@@ -33,7 +37,7 @@ public class MachineService {
         User user = userRepository.findById(userEmail).get();
         List<Machine> machines = new ArrayList<>();
         machineRepository.findAll().forEach(machine -> {
-            if(machine.getCreatedBy().equals(user) && machine.getActive()) {
+            if (machine.getCreatedBy().equals(user) && machine.getActive()) {
                 machines.add(machine);
             }
         });
@@ -71,10 +75,65 @@ public class MachineService {
 
     @Transactional
     public boolean destroyMachine(Long machineID) {
-        if(machineRepository.findById(machineID).isPresent()) {
+        if (machineRepository.findById(machineID).isPresent()) {
             machineRepository.findById(machineID).get().setActive(false);
             return true;
         }
         return false;
+    }
+
+    @Transactional
+    public void startMachine(Long machineID) {
+        Machine machine = this.machineRepository.findById(machineID).get();
+
+        new Thread(() -> {
+            try {
+                Thread.sleep(10000);
+                machine.setStatus(Status.RUNNING);
+                this.machineRepository.save(machine);
+            } catch (ObjectOptimisticLockingFailureException exception) {
+                System.out.println("Transaction denied, machine currently working on another transaction.");
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
+    }
+
+    @Transactional
+    public void stopMachine(Long machineID) {
+        Machine machine = this.machineRepository.findById(machineID).get();
+
+        new Thread(() -> {
+            try {
+                Thread.sleep(10000);
+                machine.setStatus(Status.STOPPED);
+                this.machineRepository.save(machine);
+            } catch (ObjectOptimisticLockingFailureException exception) {
+                System.out.println("Transaction denied, machine currently working on another transaction.");
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
+    }
+
+    @Transactional
+    @Modifying
+    public void restartMachine(Long machineID) {
+        Machine machine = machineRepository.findById(machineID).get();
+        new Thread(() -> {
+            try {
+                Thread.sleep(5000);
+                machine.setStatus(Status.STOPPED);
+                machineRepository.save(machine);
+                Thread.sleep(5000);
+                Machine ma = machineRepository.findById(machineID).get();
+                ma.setStatus(Status.RUNNING);
+                machineRepository.save(ma);
+            } catch (ObjectOptimisticLockingFailureException exception) {
+                System.out.println("Transaction denied, machine currently working on another transaction.");
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
     }
 }

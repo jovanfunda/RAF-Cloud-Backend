@@ -75,4 +75,40 @@ public class MachineController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
     }
+
+    @PostMapping("/startMachine/{machineID}")
+    public ResponseEntity<Void> startMachine(@RequestHeader String jwtoken, @PathVariable Long machineID) {
+        if (authService.isTokenExpired(jwtoken)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        } else if (authService.hasPermission(jwtoken, Permission.CAN_START_MACHINES)) {
+            machineService.startMachine(machineID);
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+    }
+
+    @PostMapping("/stopMachine/{machineID}")
+    public ResponseEntity<Void> stopMachine(@RequestHeader String jwtoken, @PathVariable Long machineID) {
+        if (authService.isTokenExpired(jwtoken)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        } else if (authService.hasPermission(jwtoken, Permission.CAN_STOP_MACHINES)) {
+            machineService.stopMachine(machineID);
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+    }
+
+    @PostMapping("/restartMachine/{machineID}")
+    public ResponseEntity<Void> restartMachine(@RequestHeader String jwtoken, @PathVariable Long machineID) {
+        if (authService.isTokenExpired(jwtoken)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        } else if (authService.hasPermission(jwtoken, Permission.CAN_RESTART_MACHINES)) {
+            machineService.restartMachine(machineID);
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+    }
 }
