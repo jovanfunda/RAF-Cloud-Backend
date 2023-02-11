@@ -4,12 +4,15 @@ import com.jovanfunda.model.database.Machine;
 import com.jovanfunda.model.database.User;
 import com.jovanfunda.model.enums.Status;
 import com.jovanfunda.model.requests.MachineFilterRequest;
+import com.jovanfunda.model.requests.ScheduleJobRequest;
 import com.jovanfunda.repository.MachineRepository;
 import com.jovanfunda.repository.UserRepository;
 import org.hibernate.StaleStateException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,21 +30,18 @@ public class MachineService {
     @Autowired
     UserRepository userRepository;
 
+    TaskScheduler taskScheduler;
 
-    public MachineService(MachineRepository machineRepository, UserRepository userRepository) {
+
+    public MachineService(MachineRepository machineRepository, UserRepository userRepository, TaskScheduler taskScheduler) {
         this.machineRepository = machineRepository;
         this.userRepository = userRepository;
+        this.taskScheduler = taskScheduler;
     }
 
     public List<Machine> getMachines(String userEmail) {
         User user = userRepository.findById(userEmail).get();
-        List<Machine> machines = new ArrayList<>();
-        machineRepository.findAll().forEach(machine -> {
-            if (machine.getCreatedBy().equals(user) && machine.getActive()) {
-                machines.add(machine);
-            }
-        });
-        return machines;
+        return machineRepository.findAll().stream().filter(m -> (m.getCreatedBy() == user) && m.getActive()).collect(Collectors.toList());
     }
 
     public void createMachine(String userEmail, String machineName) {
@@ -135,5 +135,48 @@ public class MachineService {
                 throw new RuntimeException(e);
             }
         }).start();
+    }
+
+    @Transactional
+    public void scheduleMachine(Long machineID, String job, String scheduleTime) {
+        Schedule schedule = new Schedule(scheduleTime);
+        CronTrigger cronTrigger = new CronTrigger("0 " + schedule.minute + " " + schedule.hour + " " + schedule.date + " " + schedule.month + " *");
+        taskScheduler.schedule(() -> {
+            switch (job) {
+                case "start":
+                    startMachine(machineID);
+                    break;
+                case "stop":
+                    stopMachine(machineID);
+                    break;
+                case "restart":
+                    restartMachine(machineID);
+                    break;
+            }
+        }, cronTrigger);
+    }
+
+    class Schedule {
+        private String minute;
+        private String hour;
+        private String month;
+        private String date;
+
+        public Schedule(String scheduleTime) {
+            date = scheduleTime.split("\\.")[0];
+            month = scheduleTime.split(" ")[0].split("\\.")[1];
+            hour = scheduleTime.split(" ")[1].split(":")[0];
+            minute = scheduleTime.split(" ")[1].split(":")[1];
+        }
+
+        @Override
+        public String toString() {
+            return "Schedule{" +
+                    "minute='" + minute + '\'' +
+                    ", hour='" + hour + '\'' +
+                    ", month='" + month + '\'' +
+                    ", date='" + date + '\'' +
+                    '}';
+        }
     }
 }

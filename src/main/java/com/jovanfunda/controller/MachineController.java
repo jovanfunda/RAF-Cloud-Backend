@@ -4,6 +4,7 @@ import com.jovanfunda.authentication.AuthService;
 import com.jovanfunda.model.database.Machine;
 import com.jovanfunda.model.enums.Permission;
 import com.jovanfunda.model.requests.MachineFilterRequest;
+import com.jovanfunda.model.requests.ScheduleJobRequest;
 import com.jovanfunda.service.MachineService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -109,6 +110,16 @@ public class MachineController {
             return ResponseEntity.ok().build();
         } else {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+    }
+
+    @PostMapping("/scheduleJob")
+    public ResponseEntity<Void> scheduleJob(@RequestHeader String jwtoken, @RequestBody ScheduleJobRequest scheduleJobRequest) {
+        if (authService.isTokenExpired(jwtoken)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        } else {
+            machineService.scheduleMachine(scheduleJobRequest.getMachineID(), scheduleJobRequest.getJob(), scheduleJobRequest.getScheduleTime());
+            return ResponseEntity.ok().build();
         }
     }
 }
