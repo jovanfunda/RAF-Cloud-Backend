@@ -1,13 +1,13 @@
 package com.jovanfunda.service;
 
+import com.jovanfunda.model.database.ErrorHistory;
 import com.jovanfunda.model.database.Machine;
 import com.jovanfunda.model.database.User;
 import com.jovanfunda.model.enums.Status;
 import com.jovanfunda.model.requests.MachineFilterRequest;
-import com.jovanfunda.model.requests.ScheduleJobRequest;
+import com.jovanfunda.repository.ErrorRepository;
 import com.jovanfunda.repository.MachineRepository;
 import com.jovanfunda.repository.UserRepository;
-import org.hibernate.StaleStateException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -30,12 +30,15 @@ public class MachineService {
     @Autowired
     UserRepository userRepository;
 
+    @Autowired
+    ErrorRepository errorRepository;
+
     TaskScheduler taskScheduler;
 
-
-    public MachineService(MachineRepository machineRepository, UserRepository userRepository, TaskScheduler taskScheduler) {
+    public MachineService(MachineRepository machineRepository, UserRepository userRepository, ErrorRepository errorRepository, TaskScheduler taskScheduler) {
         this.machineRepository = machineRepository;
         this.userRepository = userRepository;
+        this.errorRepository = errorRepository;
         this.taskScheduler = taskScheduler;
     }
 
@@ -92,7 +95,8 @@ public class MachineService {
                 machine.setStatus(Status.RUNNING);
                 this.machineRepository.save(machine);
             } catch (ObjectOptimisticLockingFailureException exception) {
-                System.out.println("Transaction denied, machine currently working on another transaction.");
+                System.out.println("Start transaction denied, machine currently working on another transaction.");
+                errorRepository.save(new ErrorHistory(new Date(), machineID, "Start", "Transaction denied, another transaction currently running"));
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -109,8 +113,10 @@ public class MachineService {
                 machine.setStatus(Status.STOPPED);
                 this.machineRepository.save(machine);
             } catch (ObjectOptimisticLockingFailureException exception) {
-                System.out.println("Transaction denied, machine currently working on another transaction.");
+                System.out.println("Stop transaction denied, machine currently working on another transaction.");
+                errorRepository.save(new ErrorHistory(new Date(), machineID, "Stop", "Transaction denied, another transaction currently running"));
             } catch (InterruptedException e) {
+                System.out.println("Runtime Exception Stopped");
                 throw new RuntimeException(e);
             }
         }).start();
@@ -123,14 +129,18 @@ public class MachineService {
         new Thread(() -> {
             try {
                 Thread.sleep(5000);
-                machine.setStatus(Status.STOPPED);
-                machineRepository.save(machine);
+//                machine.setStatus(Status.STOPPED);
+//                machineRepository.save(machine);
+                System.out.println(machineRepository.findById(machineID).get().getVersion());
+                machineRepository.firstRestartStep(machineID);
+                System.out.println(machineRepository.findById(machineID).get().getVersion());
                 Thread.sleep(5000);
                 Machine ma = machineRepository.findById(machineID).get();
                 ma.setStatus(Status.RUNNING);
                 machineRepository.save(ma);
             } catch (ObjectOptimisticLockingFailureException exception) {
-                System.out.println("Transaction denied, machine currently working on another transaction.");
+                System.out.println("Restart transaction denied, machine currently working on another transaction.");
+                errorRepository.save(new ErrorHistory(new Date(), machineID, "Restart", "Transaction denied, another transaction currently running"));
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -178,5 +188,9 @@ public class MachineService {
                     ", date='" + date + '\'' +
                     '}';
         }
+    }
+
+    public List<ErrorHistory> getErrors(String userEmail) {
+        return errorRepository.findAll().stream().filter(e -> machineRepository.findById(e.getMachineID()).get().getCreatedBy() == (userRepository.findById(userEmail)).get()).collect(Collectors.toList());
     }
 }

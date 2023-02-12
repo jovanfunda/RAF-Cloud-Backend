@@ -1,6 +1,7 @@
 package com.jovanfunda.controller;
 
 import com.jovanfunda.authentication.AuthService;
+import com.jovanfunda.model.database.ErrorHistory;
 import com.jovanfunda.model.database.Machine;
 import com.jovanfunda.model.enums.Permission;
 import com.jovanfunda.model.requests.MachineFilterRequest;
@@ -120,6 +121,18 @@ public class MachineController {
         } else {
             machineService.scheduleMachine(scheduleJobRequest.getMachineID(), scheduleJobRequest.getJob(), scheduleJobRequest.getScheduleTime());
             return ResponseEntity.ok().build();
+        }
+    }
+
+    @GetMapping("/errorHistory")
+    public ResponseEntity<List<ErrorHistory>> getErrors(@RequestHeader String jwtoken) {
+        if (authService.isTokenExpired(jwtoken)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        } else if (authService.hasPermission(jwtoken, Permission.CAN_SEARCH_MACHINES)) {
+            String userEmail = authService.getEmailFromToken(jwtoken);
+            return ResponseEntity.ok().body(machineService.getErrors(userEmail));
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
     }
 }
