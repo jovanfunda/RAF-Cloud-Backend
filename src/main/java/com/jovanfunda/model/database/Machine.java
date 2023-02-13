@@ -30,6 +30,8 @@ public class Machine {
     @Version
     Integer version = 0;
 
+    Boolean busy;
+
     public Long getId() {
         return id;
     }
@@ -85,4 +87,13 @@ public class Machine {
     public void setVersion(Integer version) {
         this.version = version;
     }
+
+    public void setBusy(Boolean value) {
+        this.busy =value;
+    }
+
+    public boolean getBusy() {
+        return busy;
+    }
+
 }

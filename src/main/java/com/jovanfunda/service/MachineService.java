@@ -10,13 +10,11 @@ import com.jovanfunda.repository.MachineRepository;
 import com.jovanfunda.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -54,6 +52,7 @@ public class MachineService {
         newMachine.setCreatedBy(userRepository.findById(userEmail).get());
         newMachine.setActive(true);
         newMachine.setDateCreated(new Date());
+        newMachine.setBusy(false);
         machineRepository.save(newMachine);
     }
 
@@ -87,37 +86,45 @@ public class MachineService {
 
     @Transactional
     public void startMachine(Long machineID) {
-        Machine machine = this.machineRepository.findById(machineID).get();
-
+        System.err.println("start prvi " + machineID);
+        int rowsUpdated = machineRepository.setBusy(machineID);
         new Thread(() -> {
             try {
-                Thread.sleep(10000);
-                machine.setStatus(Status.RUNNING);
-                this.machineRepository.save(machine);
-            } catch (ObjectOptimisticLockingFailureException exception) {
-                System.out.println("Start transaction denied, machine currently working on another transaction.");
-                errorRepository.save(new ErrorHistory(new Date(), machineID, "Start", "Transaction denied, another transaction currently running"));
+                if(rowsUpdated > 0 ) {
+                    Thread.sleep(10000);
+                    machineRepository.setRunning(machineID);
+                    machineRepository.unbusy(machineID);
+                } else {
+                    throw new Exception();
+                }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
+            } catch (Exception exception) {
+                System.out.println("Start transaction denied, machine currently working on another transaction.");
+                errorRepository.save(new ErrorHistory(new Date(), machineID, "Start", "Transaction denied, another transaction currently running"));
             }
         }).start();
     }
 
     @Transactional
     public void stopMachine(Long machineID) {
-        Machine machine = this.machineRepository.findById(machineID).get();
-
+        System.err.println("stop prvi " + machineID);
+        int rowsUpdated = machineRepository.setBusy(machineID);
         new Thread(() -> {
             try {
-                Thread.sleep(10000);
-                machine.setStatus(Status.STOPPED);
-                this.machineRepository.save(machine);
-            } catch (ObjectOptimisticLockingFailureException exception) {
-                System.out.println("Stop transaction denied, machine currently working on another transaction.");
-                errorRepository.save(new ErrorHistory(new Date(), machineID, "Stop", "Transaction denied, another transaction currently running"));
+                if(rowsUpdated > 0) {
+                    Thread.sleep(10000);
+                    machineRepository.setStopped(machineID);
+                    machineRepository.unbusy(machineID);
+                } else {
+                    throw new Exception();
+                }
             } catch (InterruptedException e) {
                 System.out.println("Runtime Exception Stopped");
                 throw new RuntimeException(e);
+            } catch (Exception exception) {
+                System.out.println("Stop transaction denied, machine currently working on another transaction.");
+                errorRepository.save(new ErrorHistory(new Date(), machineID, "Stop", "Transaction denied, another transaction currently running"));
             }
         }).start();
     }
@@ -125,24 +132,24 @@ public class MachineService {
     @Transactional
     @Modifying
     public void restartMachine(Long machineID) {
-        Machine machine = machineRepository.findById(machineID).get();
+        System.err.println("restart prvi " + machineID);
+        int rowsUpdated = machineRepository.setBusy(machineID);
         new Thread(() -> {
             try {
-                Thread.sleep(5000);
-//                machine.setStatus(Status.STOPPED);
-//                machineRepository.save(machine);
-                System.out.println(machineRepository.findById(machineID).get().getVersion());
-                machineRepository.firstRestartStep(machineID);
-                System.out.println(machineRepository.findById(machineID).get().getVersion());
-                Thread.sleep(5000);
-                Machine ma = machineRepository.findById(machineID).get();
-                ma.setStatus(Status.RUNNING);
-                machineRepository.save(ma);
-            } catch (ObjectOptimisticLockingFailureException exception) {
-                System.out.println("Restart transaction denied, machine currently working on another transaction.");
-                errorRepository.save(new ErrorHistory(new Date(), machineID, "Restart", "Transaction denied, another transaction currently running"));
+                if(rowsUpdated > 0) {
+                    Thread.sleep(5000);
+                    machineRepository.setStopped(machineID);
+                    Thread.sleep(5000);
+                    machineRepository.setRunning(machineID);
+                    machineRepository.unbusy(machineID);
+                } else {
+                    throw new Exception();
+                }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
+            } catch (Exception exception) {
+                System.out.println("Restart transaction denied, machine currently working on another transaction.");
+                errorRepository.save(new ErrorHistory(new Date(), machineID, "Restart", "Transaction denied, another transaction currently running"));
             }
         }).start();
     }

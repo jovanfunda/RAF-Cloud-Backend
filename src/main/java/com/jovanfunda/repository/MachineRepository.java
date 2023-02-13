@@ -13,7 +13,21 @@ public interface MachineRepository extends JpaRepository<Machine, Long> {
 
     @Transactional
     @Modifying
-    @Query("update Machine m set m.status='STOPPED' where m.id=:machineID")
-    public void firstRestartStep(@Param("machineID") Long machineID);
+    @Query("update Machine m set m.busy=true where m.id=:machineID and m.busy=false")
+    public int setBusy(@Param("machineID") Long machineID);
 
+    @Transactional
+    @Query("update Machine m set m.status='STOPPED' where m.id=:machineID")
+    @Modifying
+    public void setStopped(@Param("machineID") Long machineID);
+
+    @Transactional
+    @Query("update Machine m set m.status='RUNNING' where m.id=:machineID")
+    @Modifying
+    public void setRunning(@Param("machineID") Long machineID);
+
+    @Transactional
+    @Modifying
+    @Query("update Machine m set m.busy=false where m.id=:machineID")
+    public void unbusy(@Param("machineID") Long machineID);
 }
