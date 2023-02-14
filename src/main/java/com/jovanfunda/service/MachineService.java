@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,7 +33,10 @@ public class MachineService {
     @Autowired
     ErrorRepository errorRepository;
 
+    @Autowired
     TaskScheduler taskScheduler;
+
+    private final Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<>();
 
     public MachineService(MachineRepository machineRepository, UserRepository userRepository, ErrorRepository errorRepository, TaskScheduler taskScheduler) {
         this.machineRepository = machineRepository;
@@ -65,8 +70,8 @@ public class MachineService {
         if (machineFilter.getName() != null) {
             machines = machines.stream().filter(m -> m.getName().toLowerCase().contains(machineFilter.getName().toLowerCase())).collect(Collectors.toList());
         }
-        if (machineFilter.getStatuses() != null) {
-            machines = machines.stream().filter(m -> machineFilter.getStatuses().contains(m.getStatus())).collect(Collectors.toList());
+        if (machineFilter.getStatus() != null) {
+            machines = machines.stream().filter(m -> machineFilter.getStatus().contains(m.getStatus())).collect(Collectors.toList());
         }
         if (machineFilter.getDateFrom() != null && machineFilter.getDateTo() != null) {
             machines = machines.stream().filter(m -> m.getDateCreated().after(machineFilter.getDateFrom()) && m.getDateCreated().before(machineFilter.getDateTo())).collect(Collectors.toList());
@@ -158,7 +163,7 @@ public class MachineService {
     public void scheduleMachine(Long machineID, String job, String scheduleTime) {
         Schedule schedule = new Schedule(scheduleTime);
         CronTrigger cronTrigger = new CronTrigger("0 " + schedule.minute + " " + schedule.hour + " " + schedule.date + " " + schedule.month + " *");
-        taskScheduler.schedule(() -> {
+        Runnable task = () -> {
             switch (job) {
                 case "start":
                     startMachine(machineID);
@@ -169,6 +174,13 @@ public class MachineService {
                 case "restart":
                     restartMachine(machineID);
                     break;
+            }
+        };
+        taskQueue.add(task);
+        taskScheduler.schedule(() -> {
+            Runnable nextTask = taskQueue.poll();
+            if (nextTask != null) {
+                nextTask.run();
             }
         }, cronTrigger);
     }

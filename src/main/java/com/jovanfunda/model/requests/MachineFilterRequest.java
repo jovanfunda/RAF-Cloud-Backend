@@ -8,7 +8,7 @@ import java.util.List;
 public class MachineFilterRequest {
 
     String name;
-    List<Status> statuses;
+    List<Status> status;
     Date dateFrom;
     Date dateTo;
 
@@ -20,12 +20,12 @@ public class MachineFilterRequest {
         this.name = name;
     }
 
-    public List<Status> getStatuses() {
-        return statuses;
+    public List<Status> getStatus() {
+        return status;
     }
 
-    public void setStatuses(List<Status> statuses) {
-        this.statuses = statuses;
+    public void setStatus(List<Status> statuses) {
+        this.status = statuses;
     }
 
     public Date getDateFrom() {
